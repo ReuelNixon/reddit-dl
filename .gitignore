@@ -2,6 +2,7 @@
 reddit-dl-Outputs
 .DS_Store
 .vscode
+Outputs
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
