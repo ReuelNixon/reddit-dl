@@ -14,22 +14,24 @@ reddit = praw.Reddit(
 
 
 def findDirName(n):
-    path = os.getcwd()
+    current_path = os.getcwd()
+    path = os.path.join(current_path, "Outputs")
     if n == 0:
-        if not os.path.isdir(path + "/Outputs"):
-            return "/Outputs"
+        if not os.path.isdir(path):
+            return "Outputs"
         return findDirName(n + 1)
 
-    if not os.path.isdir(path + "/Outputs" + str(n)):
-        return "/Outputs" + str(n)
+    if not os.path.isdir(path + str(n)):
+        return "Outputs" + str(n)
     return findDirName(n + 1)
 
 
 def download(subreddit, filter="new", timefil="today", lim=10):
     path = os.getcwd()
     dirName = findDirName(0)
-    os.makedirs(path + dirName)
-    print(f"Downloading {lim} {filter} posts from r/{subreddit} to {path+dirName}")
+    output_dir = os.path.join(path, dirName)
+    os.makedirs(output_dir)
+    print(f"Downloading {lim} {filter} posts from r/{subreddit} to {output_dir}")
     a = []
     if filter == "top":
         a = reddit.subreddit(subreddit).top(time_filter=timefil, limit=lim)
@@ -47,14 +49,16 @@ def download(subreddit, filter="new", timefil="today", lim=10):
         audio_url = fallback_url.split("DASH_")[0] + "DASH_audio.mp4"
         v = requests.get(fallback_url)
         a = requests.get(audio_url)
-        vidPath = path + dirName + "/" + title + "-video.mp4"
-        audPath = path + dirName + "/" + title + "-audio.mp4"
-        with open(vidPath, "wb") as f:
+        vid_path = os.path.join(output_dir, title + "-video.mp4")
+        aud_path = os.path.join(output_dir, title + "-audio.mp4")
+        with open(vid_path, "wb") as f:
             f.write(v.content)
-        with open(audPath, "wb") as f:
+        with open(aud_path, "wb") as f:
             f.write(a.content)
-        os.system(f"ffmpeg -i {vidPath} -i {audPath} {path+dirName+'/'+title+'.mp4'}")
-        os.system(f"rm {vidPath} {audPath}")
+        os.system(
+            f"ffmpeg -i {vid_path} -i {aud_path} {os.path.join(output_dir, title+'.mp4')}"
+        )
+        os.system(f"rm {vid_path} {aud_path}")
 
 
 def main():
