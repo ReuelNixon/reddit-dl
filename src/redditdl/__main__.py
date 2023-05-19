@@ -1,5 +1,6 @@
 import praw
 import os
+import requests
 from . import SECRETS
 
 reddit = praw.Reddit(
@@ -23,18 +24,36 @@ def findDirName(n):
     return findDirName(n + 1)
 
 
-def main():
+def download(subreddit, filter="new", lim=10):
     path = os.getcwd()
     dirName = findDirName(0)
     os.makedirs(path + dirName)
-    commands = []
-    for submission in reddit.subreddit("unexpected").top(time_filter="all", limit=2):
+    a = []
+    if filter == "top":
+        a = reddit.subreddit(subreddit).top(time_filter="all", limit=lim)
+    elif filter == "hot":
+        a = reddit.subreddit(subreddit).hot(limit=lim)
+    elif filter == "new":
+        a = reddit.subreddit(subreddit).new(limit=lim)
+    for submission in a:
+        if submission is None:
+            continue
         title = submission.title.replace(" ", "-")
-        hls_url = submission.media["reddit_video"]["hls_url"].split("?")[0]
-        command = f"ffmpeg -i {hls_url} -bsf:a aac_adtstoasc -vcodec copy -c copy -crf 50 .{dirName}/{title}.mp4"
-        commands.append(command)
-    os.system(" && ".join(commands))
+        title = title.replace("'", "")
+        title = title.replace('"', "")
+        fallback_url = submission.media["reddit_video"]["fallback_url"].split("?")[0]
+        audio_url = fallback_url.split("DASH_")[0] + "DASH_audio.mp4"
+        v = requests.get(fallback_url)
+        a = requests.get(audio_url)
+        vidPath = path + dirName + "/" + title + "-video.mp4"
+        audPath = path + dirName + "/" + title + "-audio.mp4"
+        with open(vidPath, "wb") as f:
+            f.write(v.content)
+        with open(audPath, "wb") as f:
+            f.write(a.content)
+        os.system(f"ffmpeg -i {vidPath} -i {audPath} {path+dirName+'/'+title+'.mp4'}")
+        os.system(f"rm {vidPath} {audPath}")
 
 
 if __name__ == "__main__":
-    main()
+    download("unexpected", "top", 10)
